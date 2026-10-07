@@ -1,0 +1,42 @@
+name: Refresh official market data
+on:
+  schedule:
+    - cron: '23 2,8,14,20 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cascade-public-data-refresh
+  cancel-in-progress: false
+jobs:
+  refresh:
+    if: github.repository == 'nkis-works/cascade-public-data' && github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the public data repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - name: Validate the existing public bundle
+        run: npm test
+      - name: Collect and validate official sources
+        run: npm run refresh
+      - name: Validate the completed public bundle
+        run: npm test
+      - name: Publish the atomic data update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- data/feed.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Refresh validated official market data'
+          git -c credential.helper= -c credential.helper='!gh auth git-credential' push origin HEAD:main
