@@ -1,19 +1,19 @@
 {
   "schema": "CASCADE_PUBLIC_FEED_1",
-  "generated_at": "2026-10-09T19:35:27.409Z",
+  "generated_at": "2026-10-10T00:06:40.800Z",
   "interval_ms": 21600000,
   "outcomes": {
     "ecb": {
       "state": "ready",
-      "checked_at": "2026-10-09T19:35:27.409Z"
+      "checked_at": "2026-10-10T00:06:40.800Z"
     },
     "cftc_fx": {
       "state": "ready",
-      "checked_at": "2026-10-09T19:35:27.409Z"
+      "checked_at": "2026-10-10T00:06:40.800Z"
     },
     "gold": {
       "state": "ready",
-      "checked_at": "2026-10-09T19:35:27.409Z"
+      "checked_at": "2026-10-10T00:06:40.800Z"
     }
   },
   "reference_inputs": {
@@ -3867,7 +3867,7 @@
   "observatory": {
     "schema": "CASCADE_OBSERVATORY_1",
     "formula_version": "DAILY_ANOMALY_2",
-    "generated_at": "2026-10-09T19:35:27.393Z",
+    "generated_at": "2026-10-10T00:06:40.784Z",
     "rows": [
       {
         "schema": "CASCADE_ECB_REFERENCE_3",
@@ -3895,7 +3895,7 @@
         "signal_role": "REFERENCE_CONTEXT_ONLY",
         "frequency": "DAILY",
         "trading_signal": "DISABLED",
-        "collected_at": "2026-10-09T19:35:27.393Z",
+        "collected_at": "2026-10-10T00:06:40.784Z",
         "history": [
           {
             "date": "2025-07-11",
@@ -7765,7 +7765,7 @@
         "signal_role": "REFERENCE_CONTEXT_ONLY",
         "frequency": "DAILY",
         "trading_signal": "DISABLED",
-        "collected_at": "2026-10-09T19:35:27.393Z",
+        "collected_at": "2026-10-10T00:06:40.784Z",
         "history": [
           {
             "date": "2025-07-11",
@@ -11635,7 +11635,7 @@
         "signal_role": "REFERENCE_CONTEXT_ONLY",
         "frequency": "DAILY",
         "trading_signal": "DISABLED",
-        "collected_at": "2026-10-09T19:35:27.393Z",
+        "collected_at": "2026-10-10T00:06:40.784Z",
         "history": [
           {
             "date": "2025-07-11",
@@ -15505,20 +15505,20 @@
       "ecb": {
         "status": "available",
         "reference_date": "2026-10-09",
-        "collected_at": "2026-10-09T19:35:27.393Z"
+        "collected_at": "2026-10-10T00:06:40.784Z"
       },
       "cftc": {
         "status": "available",
         "report_date": "2026-10-06",
-        "collected_at": "2026-10-09T19:35:27.020Z"
+        "collected_at": "2026-10-10T00:06:40.155Z"
       }
     }
   },
   "weekly": {
     "schema": "CASCADE_POSITIONING_1",
-    "collected_at": "2026-10-09T19:35:27.108Z",
+    "collected_at": "2026-10-10T00:06:40.209Z",
     "source_urls": [
-      "https://publicreporting.cftc.gov/resource/gpe5-46if.json?%24select=id%2Creport_date_as_yyyy_mm_dd%2Ccftc_contract_market_code%2Cmarket_and_exchange_names%2Copen_interest_all%2Casset_mgr_positions_long%2Casset_mgr_positions_short%2Clev_money_positions_long%2Clev_money_positions_short%2Cfutonly_or_combined&%24where=cftc_contract_market_code+in+%28%27097741%27%2C%27099741%27%2C%27096742%27%29+AND+report_date_as_yyyy_mm_dd+%3E%3D+%272022-01-01T00%3A00%3A00.000%27+AND+report_date_as_yyyy_mm_dd+%3C%3D+%272026-10-09T00%3A00%3A00.000%27&%24order=report_date_as_yyyy_mm_dd+ASC%2Ccftc_contract_market_code+ASC&%24limit=1000&%24offset=0"
+      "https://publicreporting.cftc.gov/resource/gpe5-46if.json?%24select=id%2Creport_date_as_yyyy_mm_dd%2Ccftc_contract_market_code%2Cmarket_and_exchange_names%2Copen_interest_all%2Casset_mgr_positions_long%2Casset_mgr_positions_short%2Clev_money_positions_long%2Clev_money_positions_short%2Cfutonly_or_combined&%24where=cftc_contract_market_code+in+%28%27097741%27%2C%27099741%27%2C%27096742%27%29+AND+report_date_as_yyyy_mm_dd+%3E%3D+%272022-01-01T00%3A00%3A00.000%27+AND+report_date_as_yyyy_mm_dd+%3C%3D+%272026-10-10T00%3A00%3A00.000%27&%24order=report_date_as_yyyy_mm_dd+ASC%2Ccftc_contract_market_code+ASC&%24limit=1000&%24offset=0"
     ],
     "instruments": {
       "USDJPY": [
