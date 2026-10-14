@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {readFile,mkdtemp,rm} from 'node:fs/promises';import {join} from 'node:path';import {tmpdir} from 'node:os';
 import {parseOilHtml,collectOil} from '../scripts/collect-oil.mjs';
-import {OIL_SOURCES,OIL_FEED_URL,validateOil,oilSeriesHealth,oilChange,oilSpread,loadOil} from '../src/oil-data.js';
+import {OIL_SOURCES,OIL_FEED_URL,validateOil,oilSeriesHealth,oilChange,oilSpread,loadOil,oilPriceWindow} from '../src/oil-data.js';
 const now=Date.parse('2026-10-14T16:00:00Z'),stamp=new Date(now).toISOString();
 const html=Object.fromEntries(await Promise.all(Object.keys(OIL_SOURCES).map(async key=>[key,await readFile(new URL('fixtures/oil/'+key+'.html',import.meta.url),'utf8')])));
 const fixture=()=>({schema:'PUBLIC_OIL_1',generated_at:stamp,series:Object.fromEntries(Object.entries(OIL_SOURCES).map(([key,s])=>[key,{state:'ready',checked_at:stamp,collected_at:stamp,source_url:s.url,unit:s.unit,...parseOilHtml(html[key],key)}]))});
@@ -53,3 +53,27 @@ test('browser fetch allows only fixed public snapshots, rejects malformed/oversi
  await assert.rejects(()=>loadOil(async()=>new Response('x'.repeat(160000),{headers:{'content-type':'application/json'}})));
  await assert.rejects(()=>loadOil(async()=>new Response('{}',{headers:{'content-type':'application/json'}})));
 });
+// Synthetic boundary-test rows only; the published snapshot is checked separately below.
+const expandedFixture=()=>{
+ const bundle=fixture();
+ for(const [key,series]of Object.entries(bundle.series)){
+  const latest=series.rows.at(-1),count=key==='inventory'?260:780,step=(key==='inventory'?7:1)*86400000;
+  series.rows=Array.from({length:count},(_,i)=>({date:new Date(Date.parse(latest.date)-(count-1-i)*step).toISOString().slice(0,10),value:latest.value}));
+ }
+ return bundle;
+};
+test('price histories retain 780 observations while inventories retain 260, and reject overflow',()=>{
+ const bundle=expandedFixture();validateOil(bundle,{now});
+ assert.equal(bundle.series.wti.rows.length,780);assert.equal(bundle.series.brent.rows.length,780);assert.equal(bundle.series.inventory.rows.length,260);
+ for(const key of Object.keys(OIL_SOURCES)){
+  const overflow=expandedFixture(),rows=overflow.series[key].rows;
+  rows.unshift({date:new Date(Date.parse(rows[0].date)-86400000).toISOString().slice(0,10),value:rows[0].value});
+  assert.throws(()=>validateOil(overflow,{now}),key+' history overflow');
+ }
+});
+test('expanded fixture fits the unchanged 150000-byte browser limit',async()=>{
+ const data=expandedFixture(),body=JSON.stringify(data);assert.ok(Buffer.byteLength(body)<150000);
+ const loaded=await loadOil(async()=>new Response(body,{headers:{'content-type':'application/json'}}),{now});
+ assert.equal(loaded.bundle.series.wti.rows.length,780);assert.equal(loaded.bundle.series.brent.rows.length,780);assert.equal(loaded.bundle.series.inventory.rows.length,260);
+});
+test('price windows use calendar months and clamp month ends, independent of observation count',()=>{const rows=['2026-04-29','2026-04-30','2026-05-01','2026-07-31'].map(date=>({date,value:1}));assert.deepEqual(oilPriceWindow(rows,3).map(r=>r.date),['2026-04-30','2026-05-01','2026-07-31']);assert.equal(oilPriceWindow(rows,12).length,4);assert.deepEqual(oilPriceWindow([],3),[]);assert.deepEqual(oilPriceWindow(rows,6),[]);});

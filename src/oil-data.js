@@ -9,7 +9,7 @@ export function oilDate(value){return typeof value==='string'&&/^\d{4}-\d{2}-\d{
 export function validateOilSeries(key,s,{now=Date.now()}={}){
  const definition=OIL_SOURCES[key],stamp=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(value)&&Number.isFinite(Date.parse(value))&&Date.parse(value)<=now+300000;
  if(!definition||!s||!['ready','retained'].includes(s.state)||!stamp(s.checked_at)||s.source_url!==definition.url||s.unit!==definition.unit)throw Error('Invalid oil source');
- if(!Array.isArray(s.rows)||s.rows.length>260||s.rows.length<2)throw Error('Oil history missing');
+ if(!Array.isArray(s.rows)||s.rows.length>(key==='inventory'?260:780)||s.rows.length<2)throw Error('Oil history missing');
  if(!stamp(s.collected_at)||Date.parse(s.collected_at)>Date.parse(s.checked_at)||!oilDate(s.release_date)||!oilDate(s.next_release_date)||Date.parse(s.release_date)>now||!oilDate(s.rows.at(-1)?.date)||Date.parse(s.release_date)-Date.parse(s.rows.at(-1).date)>21*DAY||Date.parse(s.next_release_date)<=Date.parse(s.release_date)||Date.parse(s.next_release_date)-Date.parse(s.release_date)>21*DAY)throw Error('Invalid oil release dates');
  let last='';for(const r of s.rows){if(!oilDate(r.date)||r.date<=last||r.date<'1980-01-01'||Date.parse(r.date)>Date.parse(s.release_date)||!Number.isFinite(r.value)||Math.abs(r.value)> (key==='inventory'?100000000:100000)||key==='inventory'&&(!Number.isSafeInteger(r.value)||r.value<=0))throw Error('Invalid oil observation');last=r.date;}
  return s;
@@ -32,6 +32,14 @@ export function oilChange(series,offset=1){
  const latest=series.rows.at(-1),prior=series.rows.at(-1-offset);if(!latest||!prior)return null;
  // Price differences remain valid when the original WTI observation was zero or negative.
  return {date:latest.date,previous:prior.date,latest:latest.value,change:latest.value-prior.value,gapDays:(Date.parse(latest.date)-Date.parse(prior.date))/DAY};
+}
+export function oilPriceWindow(rows,months=12){
+ if(!Array.isArray(rows)||!rows.length||![3,12,36].includes(months))return [];
+ const end=new Date(rows.at(-1).date),index=end.getUTCFullYear()*12+end.getUTCMonth()-months;
+ const year=Math.floor(index/12),month=index%12;
+ const day=Math.min(end.getUTCDate(),new Date(Date.UTC(year,month+1,0)).getUTCDate());
+ const cutoff=Date.UTC(year,month,day);
+ return rows.filter(row=>Date.parse(row.date)>=cutoff);
 }
 export function oilSpread(bundle){
  const wti=new Map(bundle.series.wti.rows.map(r=>[r.date,r.value]));

@@ -1,0 +1,18 @@
+{
+  "id": "231017088691F",
+  "report_date_as_yyyy_mm_dd": "2023-10-17T00:00:00.000",
+  "cftc_contract_market_code": "088691",
+  "futonly_or_combined": "FutOnly",
+  "open_interest_all": "439581",
+  "prod_merc_positions_long": "11737",
+  "prod_merc_positions_short": "41703",
+  "swap_positions_long_all": "84592",
+  "swap__positions_short_all": "182625",
+  "swap__positions_spread_all": "13733",
+  "m_money_positions_long_all": "104708",
+  "m_money_positions_short_all": "89605",
+  "m_money_positions_spread": "39547",
+  "other_rept_positions_long": "126704",
+  "other_rept_positions_short": "29069",
+  "other_rept_positions_spread": "17697"
+}

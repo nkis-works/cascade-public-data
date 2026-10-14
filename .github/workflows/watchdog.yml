@@ -9,6 +9,8 @@ on:
       - '.github/workflows/watchdog.yml'
       - 'scripts/feed-health.mjs'
       - 'scripts/collect-oil.mjs'
+      - 'scripts/collect-commodities.mjs'
+      - 'data/commodities.json'
       - 'data/oil.json'
       - 'scripts/source-fetch.mjs'
       - 'src/**'

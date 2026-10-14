@@ -2,6 +2,7 @@ import {readFile, appendFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 import {dirname, join} from 'node:path';
 import {OIL_FEED_URL, OIL_SOURCES, validateOil, oilSeriesHealth} from '../src/oil-data.js';
+import {COMMODITY_FEED_URL,validateCommodityPositions,commodityWarnings} from '../src/commodity-positioning.js';
 import {validateFeed, FEED_INTERVAL} from '../src/feed-contract.js';
 import {fetchSourceBytes, sourceFailureReason} from './source-fetch.mjs';
 
@@ -37,19 +38,29 @@ export function oilHealth(bundle,{now=Date.now()}={}){
  return {healthy:issues.length===0,issues,generated_at:bundle.generated_at,observation_dates};
 }
 
+export function commodityFeedHealth(bundle,{now=Date.now()}={}){
+ validateCommodityPositions(bundle,{now});
+ const observation_dates=Object.fromEntries(Object.entries(bundle.instruments).map(([asset,series])=>[asset,series.rows.at(-1).date]));
+ const contracts=Object.fromEntries(Object.entries(bundle.instruments).map(([asset,series])=>[asset,series.contract]));
+ const reasons={'retained':'source collection did not complete; previous reports retained','stale-check':'source check is delayed for more than 24 hours','stale-report':'report date is older than 12 days'};
+ const issues=commodityWarnings(bundle,{now}).map(({asset,code})=>'CFTC '+(asset==='gold'?'gold':'WTI oil')+' futures ('+contracts[asset]+'; report '+observation_dates[asset]+'): '+reasons[code]);
+ return {healthy:issues.length===0,issues,generated_at:bundle.generated_at,observation_dates,contracts};
+}
+
 export async function remoteHealth({fetcher=fetch,sleep,now=Date.now()}={}){
- const issues=[];let feed=null,oil=null;
- const checks=[['Published data feed',FEED_URL,'text/plain',2000000],['Published EIA oil data',OIL_FEED_URL,'text/plain',150000],...['/','/tools/position-check/','/tools/position-map/','/tools/gold-check/','/markets/oil/'].map(route=>[route,SITE+route,'text/html',300000])];
+ const issues=[];let feed=null,oil=null,commodities=null;
+ const checks=[['Published data feed',FEED_URL,'text/plain',2000000],['Published EIA oil data',OIL_FEED_URL,'text/plain',150000],['Published CFTC commodity data',COMMODITY_FEED_URL,'text/plain',300000],...['/','/tools/position-check/','/tools/position-map/','/tools/gold-check/','/markets/oil/','/markets/gold/'].map(route=>[route,SITE+route,'text/html',300000])];
  await Promise.all(checks.map(async([name,url,accept,maxBytes])=>{
   try{
    const {buffer}=await fetchSourceBytes(url,{accept,maxBytes,fetcher,sleep,timeoutMs:12000});
    const text=new TextDecoder('utf-8',{fatal:true}).decode(buffer);
    if(url===FEED_URL){feed=feedHealth(JSON.parse(text),{now});issues.push(...feed.issues);}
    else if(url===OIL_FEED_URL){oil=oilHealth(JSON.parse(text),{now});issues.push(...oil.issues);}
+   else if(url===COMMODITY_FEED_URL){commodities=commodityFeedHealth(JSON.parse(text),{now});issues.push(...commodities.issues);}
    else if(!/<h1\b/i.test(text)||!/<title>[^<]+<\/title>/i.test(text))issues.push(name+': expected page content is missing');
   }catch(error){issues.push(name+': '+sourceFailureReason(error));}
  }));
- return {healthy:issues.length===0,issues,feed,oil,checked_at:new Date(now).toISOString()};
+ return {healthy:issues.length===0,issues,feed,oil,commodities,checked_at:new Date(now).toISOString()};
 }
 
 async function main(){
@@ -60,7 +71,9 @@ async function main(){
   const file=process.argv[2]??'data/feed.json',feed=feedHealth(JSON.parse(await readFile(file,'utf8')));
   let oil;try{oil=oilHealth(JSON.parse(await readFile(process.argv[3]??join(dirname(file),'oil.json'),'utf8')));}
   catch(error){oil={healthy:false,issues:['EIA oil data: '+sourceFailureReason(error)]};}
-  const issues=[...feed.issues,...oil.issues];result={healthy:issues.length===0,issues,feed,oil};
+  let commodities;try{commodities=commodityFeedHealth(JSON.parse(await readFile(process.argv[4]??join(dirname(file),'commodities.json'),'utf8')));}
+  catch(error){commodities={healthy:false,issues:['CFTC commodity data: '+sourceFailureReason(error)]};}
+  const issues=[...feed.issues,...oil.issues,...commodities.issues];result={healthy:issues.length===0,issues,feed,oil,commodities};
  }
  console.log(JSON.stringify(result));
  if(process.env.GITHUB_STEP_SUMMARY)await appendFile(process.env.GITHUB_STEP_SUMMARY,'### Public market data health\n\n'+(result.healthy?'All monitored sources and checks passed.':result.issues.map(issue=>'- '+issue).join('\n'))+'\n');

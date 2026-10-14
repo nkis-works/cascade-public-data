@@ -28,7 +28,7 @@ export function parseOilHtml(html,key){
   }
  }
  if(rows.length<60)throw Error('EIA history unexpectedly short');
- return {release_date,next_release_date,rows:rows.slice(-260)};
+ return {release_date,next_release_date,rows:rows.slice(key==='inventory'?-260:-780)};
 }
 export async function collectOil({file='data/oil.json',fetcher=fetch,now=Date.now(),sleep}={}){
  let previous=null;try{previous=validateOil(JSON.parse(await readFile(file,'utf8')),{now});}catch{}
