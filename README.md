@@ -9,3 +9,13 @@ Public standard GitHub-hosted runners and static Cloudflare Pages delivery have 
 Sources: [ECB EXR](https://data.ecb.europa.eu/data/datasets/EXR) and [CFTC Commitments of Traders](https://www.cftc.gov/MarketReports/CommitmentsofTraders/index.htm). Currency futures use TFF Futures Only, Asset Manager and Leveraged Money; gold uses Disaggregated Futures Only, Managed Money. Report dates are positions-as-of dates, not publication dates. The histories reflect the latest source vintage, not point-in-time backtest evidence. No profit prediction or trade recommendation is provided.
 
 Run Node 24: npm test; npm run refresh. The one public file data/feed.json is validated before atomic replacement and a normal, non-force Git commit/push.
+
+## Reliability checks
+
+Official-source network failures and HTTP 408/429/500/502/503/504 responses are retried at most three times with short capped backoff. Invalid data is never retried as if it were a network failure or promoted. Failed sources retain their prior observation and retrieval dates; safe reasons appear in the job logs.
+
+After a validated bundle is published, the refresh job checks each source outcome, observation age and last successful source check. Partial failures make the job fail instead of appearing as a fully successful update. A separate read-only watchdog checks the public feed and three main pages about every six hours, and flags collector/source checks older than 24 hours. Both jobs use only standard public Ubuntu runners, no artifacts, caches, paid services or new secrets.
+
+Workflow failures use GitHub’s normal notification system. The operator must enable Actions notifications and choose email/web delivery in their GitHub notification settings; no email address or external messaging service is configured here. The watchdog also relies on GitHub scheduling and cannot detect a complete GitHub outage while that service is unavailable.
+
+Local check: `node scripts/feed-health.mjs data/feed.json`. Public check: `node scripts/feed-health.mjs --remote`.

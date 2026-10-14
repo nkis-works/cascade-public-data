@@ -2,6 +2,7 @@
 // Free, public, read-only CFTC TFF Futures Only API. No account/key is required.
 // Usage: node scripts/build-positioning.mjs [--start YYYY-MM-DD]
 // Re-downloads from the source every run. A failed run leaves both outputs intact.
+import {fetchSourceBytes} from './source-fetch.mjs';
 import {createHash} from 'node:crypto';
 import {mkdir, readFile, writeFile, rename, rm} from 'node:fs/promises';
 import {fileURLToPath, pathToFileURL} from 'node:url';
@@ -46,12 +47,7 @@ export function parsePositioningRows(rows, collectedAt, sourceUrls, startDate) {
 }
 
 async function fetchPage(url, signal) {
-  const response = await fetch(url, {headers: {Accept: 'application/json', 'User-Agent': 'CASCADE/1.4 private research preview'}, cache: 'no-store', signal: signal?AbortSignal.any([signal,AbortSignal.timeout(30000)]):AbortSignal.timeout(30000)});
-  if (!response.ok) throw new Error(`CFTC HTTP ${response.status}`);
-  if (response.url && new URL(response.url).hostname !== 'publicreporting.cftc.gov') throw new Error('Unexpected CFTC redirect');
-  if (!response.headers.get('content-type')?.includes('json')) throw new Error('CFTC non-JSON response');
-  const buffer = Buffer.from(await response.arrayBuffer());
-  if (buffer.length > 4000000) throw new Error('CFTC page exceeds size limit');
+  const {buffer, response} = await fetchSourceBytes(url, {accept: 'application/json', maxBytes: 4000000, headers: {'User-Agent': 'CASCADE/1.4 private research preview'}, signal});
   const raw = buffer.toString('utf8'), rows = JSON.parse(raw);
   if (!Array.isArray(rows) || rows.length > LIMIT) throw new Error('CFTC response/page schema mismatch');
   return {rows, evidence: {url, retrieved_at: new Date().toISOString(), http_status: response.status,

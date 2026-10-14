@@ -1,0 +1,33 @@
+name: Check public market data health
+on:
+  schedule:
+    - cron: '53 2,8,14,20 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/watchdog.yml'
+      - 'scripts/feed-health.mjs'
+      - 'scripts/source-fetch.mjs'
+      - 'src/**'
+permissions:
+  contents: read
+concurrency:
+  group: public-data-health
+  cancel-in-progress: false
+jobs:
+  check:
+    if: github.repository == 'nkis-works/cascade-public-data' && github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the public data repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - name: Check source failures, stopped updates and public pages
+        run: node scripts/feed-health.mjs --remote

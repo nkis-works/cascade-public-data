@@ -3,6 +3,15 @@ on:
   schedule:
     - cron: '23 2,8,14,20 * * *'
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - 'src/**'
+      - 'worker/**'
+      - 'tests/**'
+      - 'package.json'
+      - '.github/workflows/refresh.yml'
 permissions:
   contents: read
 concurrency:
@@ -40,3 +49,5 @@ jobs:
           if git diff --cached --quiet; then exit 0; fi
           git commit -m 'Refresh validated official market data'
           git -c credential.helper= -c credential.helper='!gh auth git-credential' push origin HEAD:main
+      - name: Fail visibly when a source remains unavailable or out of date
+        run: node scripts/feed-health.mjs data/feed.json

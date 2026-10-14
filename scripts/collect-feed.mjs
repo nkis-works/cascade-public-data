@@ -1,3 +1,4 @@
+import {fetchSourceBytes,sourceFailureReason} from './source-fetch.mjs';
 import {readFile,writeFile,rename,rm,mkdir} from 'node:fs/promises';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import path from 'node:path';
@@ -5,18 +6,18 @@ import {parseEcbCsv,parseCftc} from '../worker/sources.js';
 import {referenceSeries,frameFromSeries,FORMULA_VERSION} from '../src/reference-math.js';
 import {buildPositioning} from './build-positioning.mjs';
 import {FEED_SCHEMA,FEED_INTERVAL,ECB_FEED_SOURCE,validateFeed} from '../src/feed-contract.js';
-async function readSource(url,type,max,fetcher){
- const response=await fetcher(url,{headers:{Accept:type},redirect:'error',signal:AbortSignal.timeout(30000)});
- if(!response.ok||Number(response.headers.get('content-length')||0)>max)throw Error('Source unavailable');
- const text=await response.text();if(Buffer.byteLength(text)>max)throw Error('Source too large');return text;
+async function readSource(url,type,max,fetcher,signal){
+ const {buffer}=await fetchSourceBytes(url,{accept:type,maxBytes:max,fetcher,signal});return buffer.toString('utf8');
 }
-export async function collectFeed({file=fileURLToPath(new URL('../data/public-feed.json',import.meta.url)),fetcher=fetch,buildWeekly=buildPositioning}={}){
+export async function collectFeed({file=fileURLToPath(new URL('../data/public-feed.json',import.meta.url)),fetcher=fetch,buildWeekly=buildPositioning,signal}={}){
  let previous=null;try{previous=validateFeed(JSON.parse(await readFile(file,'utf8')));}catch(error){if(error.code!=='ENOENT')throw error;}
  const attempts=await Promise.allSettled([
-  (async()=>{const inputs=parseEcbCsv(await readSource(ECB_FEED_SOURCE,'text/csv',2000000,fetcher));const collected_at=new Date().toISOString();const rows=['EURUSD','GBPUSD','USDJPY'].map(instrument=>{const history=referenceSeries(inputs[instrument]);return {...frameFromSeries(instrument,history,ECB_FEED_SOURCE),collected_at,history};});return {inputs,rows,collected_at};})(),
-  buildWeekly().then(result=>result.dataset),
-  (async()=>{const url=new URL('https://publicreporting.cftc.gov/resource/72hh-3qpy.json');url.search=new URLSearchParams({'$select':'id,report_date_as_yyyy_mm_dd,cftc_contract_market_code,market_and_exchange_names,open_interest_all,m_money_positions_long_all,m_money_positions_short_all,futonly_or_combined','$where':"cftc_contract_market_code = '088691'",'$order':'report_date_as_yyyy_mm_dd DESC','$limit':'1'});const rows=JSON.parse(await readSource(url,'application/json',20000,fetcher));if(!Array.isArray(rows)||rows.length!==1||rows[0].futonly_or_combined!=='FutOnly')throw Error('Gold report mismatch');return {gold:{...parseCftc('XAUUSD',rows[0]),source_url:url.href},collected_at:new Date().toISOString()};})()
+  (async()=>{const inputs=parseEcbCsv(await readSource(ECB_FEED_SOURCE,'text/csv',2000000,fetcher,signal));const collected_at=new Date().toISOString();const rows=['EURUSD','GBPUSD','USDJPY'].map(instrument=>{const history=referenceSeries(inputs[instrument]);return {...frameFromSeries(instrument,history,ECB_FEED_SOURCE),collected_at,history};});return {inputs,rows,collected_at};})(),
+  buildWeekly({signal}).then(result=>result.dataset),
+  (async()=>{const url=new URL('https://publicreporting.cftc.gov/resource/72hh-3qpy.json');url.search=new URLSearchParams({'$select':'id,report_date_as_yyyy_mm_dd,cftc_contract_market_code,market_and_exchange_names,open_interest_all,m_money_positions_long_all,m_money_positions_short_all,futonly_or_combined','$where':"cftc_contract_market_code = '088691'",'$order':'report_date_as_yyyy_mm_dd DESC','$limit':'1'});const rows=JSON.parse(await readSource(url,'application/json',20000,fetcher,signal));if(!Array.isArray(rows)||rows.length!==1||rows[0].futonly_or_combined!=='FutOnly')throw Error('Gold report mismatch');return {gold:{...parseCftc('XAUUSD',rows[0]),source_url:url.href},collected_at:new Date().toISOString()};})()
  ]);
+ for(const [i,label]of ['ECB','CFTC FX','CFTC gold'].entries())if(attempts[i].status==='rejected')console.error(`Source ${label} failed: ${sourceFailureReason(attempts[i].reason)}`);
+ signal?.throwIfAborted();
  if(!previous&&attempts.slice(0,2).some(result=>result.status!=='fulfilled'))throw Error('Initial daily and weekly collection must both succeed');
  const checked=new Date().toISOString(),outcomes={};
  for(const [i,key]of ['ecb','cftc_fx','gold'].entries())outcomes[key]={state:attempts[i].status==='fulfilled'?'ready':previous?'failed':'unavailable',checked_at:checked};
