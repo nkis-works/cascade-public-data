@@ -8,6 +8,8 @@ on:
     paths:
       - '.github/workflows/watchdog.yml'
       - 'scripts/feed-health.mjs'
+      - 'scripts/collect-oil.mjs'
+      - 'data/oil.json'
       - 'scripts/source-fetch.mjs'
       - 'src/**'
 permissions:
