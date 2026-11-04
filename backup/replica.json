@@ -1,0 +1,23 @@
+{
+  "schema": "PUBLIC_MARKET_REPLICA_1",
+  "slot": 83046,
+  "published_at": "2026-11-04T17:12:38.978Z",
+  "repository": "nkis-works/cascade-public-data",
+  "files": {
+    "feed": {
+      "path": "/data/feed.json",
+      "sha256": "8ee2e4410bdb7aa83a95404a82f2ed6cd8f04933e3c0d676a00ed62e76897562",
+      "generated_at": "2026-11-04T16:53:10.753Z"
+    },
+    "oil": {
+      "path": "/data/oil.json",
+      "sha256": "32db020357dc59f4ae7d1a2663d21acd4a83d40b6d9023f9ac1e87dc82f806f9",
+      "generated_at": "2026-11-04T16:53:10.806Z"
+    },
+    "commodities": {
+      "path": "/data/commodities.json",
+      "sha256": "12fb3ad96ae560e320f3b99a09688a41cd3544d5ed9723faa7ad38eeea2862a0",
+      "generated_at": "2026-11-04T16:53:16.076Z"
+    }
+  }
+}
