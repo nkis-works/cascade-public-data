@@ -1,37 +1,59 @@
-name: Check public market data health
+name: Check and repair public market data health
 on:
   schedule:
-    - cron: '53 2,8,14,20 * * *'
+    - cron: '53 * * * *'
   workflow_dispatch:
   push:
     branches: [main]
     paths:
-      - '.github/workflows/watchdog.yml'
-      - 'scripts/feed-health.mjs'
-      - 'scripts/collect-oil.mjs'
-      - 'scripts/collect-commodities.mjs'
-      - 'data/commodities.json'
-      - 'data/oil.json'
-      - 'scripts/source-fetch.mjs'
+      - 'scripts/**'
       - 'src/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'backup/**'
+      - '.github/workflows/watchdog.yml'
 permissions:
   contents: read
 concurrency:
-  group: public-data-health
+  group: cascade-public-data-writer
   cancel-in-progress: false
 jobs:
-  check:
-    if: github.repository == 'nkis-works/cascade-public-data' && github.event.repository.private == false
+  check-and-repair:
+    if: github.repository == 'nkis-works/cascade-public-data' && github.event.repository.private == false && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
+    permissions:
+      contents: write
     steps:
-      - name: Check out the public data repository
+      - name: Check out current public main
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
+          ref: main
           persist-credentials: false
       - name: Set up Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24'
-      - name: Check source failures, stopped updates and public pages
+      - name: Determine whether collection or recovery is needed
+        id: readiness
+        run: node scripts/feed-operations.mjs
+      - name: Validate the existing public bundle
+        if: steps.readiness.outputs.needed == 'true'
+        run: npm test
+      - name: Collect official sources
+        if: steps.readiness.outputs.needed == 'true'
+        run: npm run refresh
+      - name: Validate the completed public bundle
+        if: steps.readiness.outputs.needed == 'true'
+        run: npm test
+      - name: Prepare the current static replica slot
+        run: node scripts/prepare-backup.mjs
+      - name: Publish validated data with bounded conflict recovery
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/feed-operations.mjs publish
+      - name: Fail visibly when sources remain unavailable or overdue
+        run: node scripts/feed-health.mjs data/feed.json
+      - name: Check published feeds and public pages
+        if: always()
         run: node scripts/feed-health.mjs --remote
