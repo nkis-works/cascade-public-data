@@ -1,0 +1,10 @@
+/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: no-cache
+  X-Content-Type-Options: nosniff
+  X-Robots-Tag: noindex, nofollow
+  Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+/data/*
+  Content-Type: application/json; charset=utf-8
+/replica.json
+  Content-Type: application/json; charset=utf-8
