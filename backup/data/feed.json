@@ -1,19 +1,19 @@
 {
   "schema": "CASCADE_PUBLIC_FEED_1",
-  "generated_at": "2026-11-06T15:25:58.796Z",
+  "generated_at": "2026-11-06T21:07:33.110Z",
   "interval_ms": 21600000,
   "outcomes": {
     "ecb": {
       "state": "ready",
-      "checked_at": "2026-11-06T15:25:58.796Z"
+      "checked_at": "2026-11-06T21:07:33.110Z"
     },
     "cftc_fx": {
       "state": "ready",
-      "checked_at": "2026-11-06T15:25:58.796Z"
+      "checked_at": "2026-11-06T21:07:33.110Z"
     },
     "gold": {
       "state": "ready",
-      "checked_at": "2026-11-06T15:25:58.796Z"
+      "checked_at": "2026-11-06T21:07:33.110Z"
     }
   },
   "reference_inputs": {
@@ -3867,7 +3867,7 @@
   "observatory": {
     "schema": "CASCADE_OBSERVATORY_1",
     "formula_version": "DAILY_ANOMALY_2",
-    "generated_at": "2026-11-06T15:25:58.785Z",
+    "generated_at": "2026-11-06T21:07:28.786Z",
     "rows": [
       {
         "schema": "CASCADE_ECB_REFERENCE_3",
@@ -3895,7 +3895,7 @@
         "signal_role": "REFERENCE_CONTEXT_ONLY",
         "frequency": "DAILY",
         "trading_signal": "DISABLED",
-        "collected_at": "2026-11-06T15:25:58.785Z",
+        "collected_at": "2026-11-06T21:07:28.786Z",
         "history": [
           {
             "date": "2025-08-08",
@@ -7765,7 +7765,7 @@
         "signal_role": "REFERENCE_CONTEXT_ONLY",
         "frequency": "DAILY",
         "trading_signal": "DISABLED",
-        "collected_at": "2026-11-06T15:25:58.785Z",
+        "collected_at": "2026-11-06T21:07:28.786Z",
         "history": [
           {
             "date": "2025-08-08",
@@ -11635,7 +11635,7 @@
         "signal_role": "REFERENCE_CONTEXT_ONLY",
         "frequency": "DAILY",
         "trading_signal": "DISABLED",
-        "collected_at": "2026-11-06T15:25:58.785Z",
+        "collected_at": "2026-11-06T21:07:28.786Z",
         "history": [
           {
             "date": "2025-08-08",
@@ -15484,17 +15484,17 @@
       "XAUUSD": {
         "schema": "CASCADE_CFTC_CONTEXT_1",
         "instrument": "XAUUSD",
-        "report_date": "2026-10-27",
+        "report_date": "2026-11-03",
         "market_name": "GOLD - COMMODITY EXCHANGE INC.",
-        "open_interest": 396810,
-        "spec_long": 122508,
-        "spec_short": 16946,
-        "spec_net": 105562,
-        "net_oi": 0.266027,
-        "cot_bias": 0.901079,
+        "open_interest": 399169,
+        "spec_long": 122283,
+        "spec_short": 18669,
+        "spec_net": 103614,
+        "net_oi": 0.259574,
+        "cot_bias": 0.894116,
         "source_dataset_id": "CFTC_DISAGG_FUTURES_ONLY_WEEKLY",
         "report_type": "FutOnly",
-        "source_record_id": "261027088691F",
+        "source_record_id": "261103088691F",
         "rights_status": "PRODUCTION-CANDIDATE",
         "signal_role": "CONTEXT_ONLY",
         "trading_signal": "DISABLED",
@@ -15505,18 +15505,18 @@
       "ecb": {
         "status": "available",
         "reference_date": "2026-11-06",
-        "collected_at": "2026-11-06T15:25:58.785Z"
+        "collected_at": "2026-11-06T21:07:28.786Z"
       },
       "cftc": {
         "status": "available",
-        "report_date": "2026-10-27",
-        "collected_at": "2026-11-06T15:25:58.105Z"
+        "report_date": "2026-11-03",
+        "collected_at": "2026-11-06T21:07:28.217Z"
       }
     }
   },
   "weekly": {
     "schema": "CASCADE_POSITIONING_1",
-    "collected_at": "2026-11-06T15:25:58.131Z",
+    "collected_at": "2026-11-06T21:07:33.101Z",
     "source_urls": [
       "https://publicreporting.cftc.gov/resource/gpe5-46if.json?%24select=id%2Creport_date_as_yyyy_mm_dd%2Ccftc_contract_market_code%2Cmarket_and_exchange_names%2Copen_interest_all%2Casset_mgr_positions_long%2Casset_mgr_positions_short%2Clev_money_positions_long%2Clev_money_positions_short%2Cfutonly_or_combined&%24where=cftc_contract_market_code+in+%28%27097741%27%2C%27099741%27%2C%27096742%27%29+AND+report_date_as_yyyy_mm_dd+%3E%3D+%272022-01-01T00%3A00%3A00.000%27+AND+report_date_as_yyyy_mm_dd+%3C%3D+%272026-11-06T00%3A00%3A00.000%27&%24order=report_date_as_yyyy_mm_dd+ASC%2Ccftc_contract_market_code+ASC&%24limit=1000&%24offset=0"
     ],
@@ -18545,6 +18545,18 @@
             "long": 76365,
             "short": 90995
           }
+        },
+        {
+          "date": "2026-11-03",
+          "oi": 380641,
+          "asset": {
+            "long": 151254,
+            "short": 71867
+          },
+          "leveraged": {
+            "long": 82058,
+            "short": 96875
+          }
         }
       ],
       "EURUSD": [
@@ -21571,6 +21583,18 @@
             "long": 125046,
             "short": 196620
           }
+        },
+        {
+          "date": "2026-11-03",
+          "oi": 876122,
+          "asset": {
+            "long": 485147,
+            "short": 340222
+          },
+          "leveraged": {
+            "long": 119238,
+            "short": 197797
+          }
         }
       ],
       "GBPUSD": [
@@ -24596,6 +24620,18 @@
           "leveraged": {
             "long": 59342,
             "short": 42147
+          }
+        },
+        {
+          "date": "2026-11-03",
+          "oi": 245590,
+          "asset": {
+            "long": 22698,
+            "short": 143861
+          },
+          "leveraged": {
+            "long": 63342,
+            "short": 36679
           }
         }
       ]
