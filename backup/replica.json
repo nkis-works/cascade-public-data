@@ -1,23 +1,23 @@
 {
   "schema": "PUBLIC_MARKET_REPLICA_1",
-  "slot": 83085,
-  "published_at": "2026-11-14T07:05:59.843Z",
+  "slot": 83086,
+  "published_at": "2026-11-14T14:34:16.966Z",
   "repository": "nkis-works/cascade-public-data",
   "files": {
     "feed": {
       "path": "/data/feed.json",
-      "sha256": "20c2400490709d3e95d2005807cf1b662702ba62f8fceeb9b3d585a9a9b8d96d",
-      "generated_at": "2026-11-14T07:05:54.569Z"
+      "sha256": "0814c33b33e3d9ff1b09ea344907693cd7ccc33ff375cefac73b361beca63fcd",
+      "generated_at": "2026-11-14T14:34:10.722Z"
     },
     "oil": {
       "path": "/data/oil.json",
-      "sha256": "e9f80fb9728f0706f7d55dd0bcefdf9fc401422024acaa84b17d8dde869fc5ad",
-      "generated_at": "2026-11-14T07:05:54.595Z"
+      "sha256": "ec6a7a9644497c264d0ad12d8d033c71576d6a7464d464d9fdd918565a42a77c",
+      "generated_at": "2026-11-14T14:34:10.810Z"
     },
     "commodities": {
       "path": "/data/commodities.json",
-      "sha256": "3b90ded656472cea3fd4591446a4ad5a8c346755afc55bcbc63e508ebf5e1630",
-      "generated_at": "2026-11-14T07:05:57.400Z"
+      "sha256": "b6143c8d3f13fb0650a1b305fca2bae4f217ccc19347c385ac211a0b4fe48cdd",
+      "generated_at": "2026-11-14T14:34:14.704Z"
     }
   }
 }
