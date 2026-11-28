@@ -2,7 +2,7 @@ import test from 'node:test';
 import {createHash} from 'node:crypto';
 import {REPLICA_ORIGIN} from '../scripts/prepare-backup.mjs';
 import assert from 'node:assert/strict';
-import {feedHealth,oilHealth,commodityFeedHealth,remoteHealth,replicaHealth} from '../scripts/feed-health.mjs';
+import {feedHealth,oilHealth,commodityFeedHealth,remoteHealth,replicaHealth,settledRemoteHealth} from '../scripts/feed-health.mjs';
 import {OIL_SOURCES,OIL_FEED_URL} from '../src/oil-data.js';
 import {COMMODITY_CONTRACTS,COMMODITY_FEED_URL} from '../src/commodity-positioning.js';
 import {FEED_SCHEMA,FEED_INTERVAL,ECB_FEED_SOURCE} from '../src/feed-contract.js';
@@ -11,7 +11,7 @@ import {POSITIONING_SCHEMA} from '../src/positioning.js';
 // Synthetic fixed test data. Runtime source outages must never make unit tests
 // block publication or recovery of the other sources.
 const collected_at='2026-10-14T07:49:30.319Z',now=Date.parse(collected_at),DAY=86400000;
-const fixture=()=>{
+const fixture=(collected_at=new Date(now).toISOString())=>{
  const inputs=Object.fromEntries(Object.entries({EURUSD:1.1,GBPUSD:1.3,USDJPY:150}).map(([pair,rate])=>[pair,Array.from({length:81},(_,i)=>[new Date(Date.parse('2026-10-13')-(80-i)*DAY).toISOString().slice(0,10),rate])]));
  const rows=Object.entries(inputs).map(([instrument,values])=>{const history=referenceSeries(values);return {...frameFromSeries(instrument,history,ECB_FEED_SOURCE),collected_at,history};});
  const weekly={schema:POSITIONING_SCHEMA,collected_at,source_urls:['https://publicreporting.cftc.gov/resource/gpe5-46if.json'],instruments:Object.fromEntries(['USDJPY','EURUSD','GBPUSD'].map(pair=>[pair,Array.from({length:53},(_,i)=>({date:new Date(Date.parse('2026-10-06')-(52-i)*7*DAY).toISOString().slice(0,10),oi:1000,asset:{long:100,short:80},leveraged:{long:150,short:120}}))]))};
@@ -30,6 +30,10 @@ function replicaFixture(bundle=fixture(),published_at=collected_at){
 function replicaResponse(url,{text,marker}=replicaFixture(),headers={}){
  if(!url.startsWith(REPLICA_ORIGIN+'/'))return null;
  return new Response(url.endsWith('/replica.json')?JSON.stringify(marker):text,{headers:{'content-type':'application/json','access-control-allow-origin':'*',...headers}});
+}
+function publicResponse(url,body){
+ if(url.includes('raw.githubusercontent.com'))return new Response(body??JSON.stringify(publicFixture(url)),{headers:{'content-type':'text/plain'}});
+ return new Response(body??'<title>Markets</title><h1>Markets</h1>',{headers:{'content-type':'text/html'}});
 }
 test('health uses observation dates and source outcomes rather than successful job status',()=>{
  const b=fixture();for(const source of Object.values(b.outcomes))source.state='ready';
@@ -142,4 +146,67 @@ test('replica publication age, contained feed age, source failure and primary la
  const combined=await remoteHealth({now:later,fetcher:async url=>replicaResponse(url)??new Response(url.includes('raw.githubusercontent.com')?JSON.stringify(url.endsWith('/data/feed.json')?primary:publicFixture(url)):'<title>Markets</title><h1>Markets</h1>',{headers:{'content-type':url.includes('raw.githubusercontent.com')?'text/plain':'text/html'}})});
  assert.equal(combined.feed.healthy,true);assert.equal(combined.replica.feed.healthy,true);
  assert.equal(combined.replica.healthy,false);assert.match(combined.replica.issues.join(' '),/lags the primary by more than 6 hours/);
+});
+
+test('settling rechecks a stale replica with a fresh clock and reports the recovered snapshot',async()=>{
+ const firstCheck=now+8*3600000+1,primary=fixture(new Date(firstCheck).toISOString());
+ const oldReplica=replicaFixture(),newReplica=replicaFixture(primary,new Date(firstCheck+20000).toISOString());
+ const pauses=[],checks=[];
+ let current=firstCheck;
+ const fetcher=async url=>replicaResponse(url,pauses.length===0?oldReplica:newReplica)
+  ??publicResponse(url,url.endsWith('/data/feed.json')?JSON.stringify(primary):undefined);
+ const first=await remoteHealth({fetcher,now:firstCheck});
+ assert.equal(first.feed.healthy,true);
+ assert.ok(first.issues.includes('Static replica: publication is older than 8 hours'));
+ assert.ok(first.issues.includes('Static replica: feed lags the primary by more than 6 hours'));
+ const result=await settledRemoteHealth({fetcher,clock:()=>{checks.push(current);return current;},sleep:async delay=>{pauses.push(delay);current+=delay;}});
+ assert.equal(result.healthy,true);
+ assert.deepEqual(result.issues,[]);
+ assert.equal(result.settle_attempts,2);
+ assert.equal(result.checked_at,newReplica.marker.published_at);
+ assert.deepEqual(checks,[firstCheck,firstCheck+20000]);
+ assert.deepEqual(pauses,[20000]);
+});
+
+test('settling returns immediately when every endpoint is healthy',async()=>{
+ const result=await settledRemoteHealth({
+  fetcher:async url=>replicaResponse(url)??publicResponse(url),
+  clock:()=>now,
+  sleep:async()=>assert.fail('a healthy check should not pause')
+ });
+ assert.equal(result.healthy,true);
+ assert.equal(result.settle_attempts,1);
+});
+
+test('settling reports primary feed or page failures immediately even when the replica also fails',async()=>{
+ const replica=replicaFixture();replica.text+=' ';
+ const failedFeed=fixture();failedFeed.outcomes.ecb.state='failed';
+ for(const [route,body,issue] of [
+  ['/data/feed.json',JSON.stringify(failedFeed),'ECB: source collection did not complete'],
+  ['/markets/oil/','<title>Not found</title>','/markets/oil/: expected page content is missing']
+ ]){
+  const result=await settledRemoteHealth({
+   fetcher:async url=>replicaResponse(url,replica)??publicResponse(url,url.endsWith(route)?body:undefined),
+   clock:()=>now,
+   sleep:async()=>assert.fail('a primary failure should not pause')
+  });
+  assert.equal(result.healthy,false);
+  assert.equal(result.settle_attempts,1);
+  assert.deepEqual(result.issues,[issue,'Static replica: replica feed hash does not match publication marker']);
+ }
+});
+
+test('settling attempts at most six checks and keeps the final replica validation failure',async()=>{
+ const replica=replicaFixture();replica.text+=' ';
+ const pauses=[];
+ const result=await settledRemoteHealth({
+  fetcher:async url=>replicaResponse(url,replica,pauses.length===5?{'access-control-allow-origin':'https://other.example'}:{})??publicResponse(url),
+  clock:()=>now,
+  sleep:async delay=>pauses.push(delay)
+ });
+ assert.equal(result.healthy,false);
+ assert.equal(result.settle_attempts,6);
+ assert.deepEqual(pauses,Array(5).fill(20000));
+ assert.deepEqual(result.issues,['Static replica: replica CORS header must allow public access']);
+ assert.equal(result.replica.healthy,false);
 });

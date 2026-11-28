@@ -6,11 +6,14 @@ import {dirname, join} from 'node:path';
 import {OIL_FEED_URL, OIL_SOURCES, validateOil, oilSeriesHealth} from '../src/oil-data.js';
 import {COMMODITY_FEED_URL,validateCommodityPositions,commodityWarnings} from '../src/commodity-positioning.js';
 import {validateFeed,FEED_INTERVAL} from '../src/feed-contract.js';
-import {fetchSourceBytes, sourceFailureReason} from './source-fetch.mjs';
+import {fetchSourceBytes, sourceFailureReason, waitForRetry} from './source-fetch.mjs';
 
 const FEED_URL='https://raw.githubusercontent.com/nkis-works/cascade-public-data/main/data/feed.json';
 const SITE='https://cascade-public.pages.dev';
 const DAY=86400000;
+const REPLICA_ISSUE_PREFIX='Static replica: ';
+const REPLICA_SETTLE_CHECKS=6;
+const REPLICA_SETTLE_DELAY=20000;
 export const HEARTBEAT_LIMIT=8*60*60*1000;
 export function feedHealth(bundle,{now=Date.now()}={}) {
  validateFeed(bundle,{now});
@@ -94,14 +97,26 @@ export async function remoteHealth({fetcher=fetch,sleep,now=Date.now()}={}){
  const replica=await replicaCheck;
  // Compare only after both independent reads have completed.
  if(replica.feed&&feed&&Date.parse(feed.generated_at)-Date.parse(replica.feed.generated_at)>FEED_INTERVAL){replica.issues.push('feed lags the primary by more than 6 hours');replica.healthy=false;}
- issues.push(...replica.issues.map(issue=>'Static replica: '+issue));
+ issues.push(...replica.issues.map(issue=>REPLICA_ISSUE_PREFIX+issue));
  return {healthy:issues.length===0,issues,feed,oil,commodities,replica,checked_at:new Date(now).toISOString()};
+}
+
+export async function settledRemoteHealth({fetcher=fetch,sleep=waitForRetry,clock=Date.now}={}){
+ const check=()=>remoteHealth({fetcher,sleep,now:clock()});
+ let result=await check();
+ let attempts=1;
+ while(attempts<REPLICA_SETTLE_CHECKS&&!result.healthy&&result.issues.every(issue=>issue.startsWith(REPLICA_ISSUE_PREFIX))){
+  await sleep(REPLICA_SETTLE_DELAY);
+  result=await check();
+  attempts++;
+ }
+ return {...result,settle_attempts:attempts};
 }
 
 async function main(){
  const remote=process.argv[2]==='--remote';
  let result;
- if(remote)result=await remoteHealth();
+ if(remote)result=process.argv[3]==='--settle'?await settledRemoteHealth():await remoteHealth();
  else{
   const file=process.argv[2]??'data/feed.json',feed=feedHealth(JSON.parse(await readFile(file,'utf8')));
   let oil;try{oil=oilHealth(JSON.parse(await readFile(process.argv[3]??join(dirname(file),'oil.json'),'utf8')));}

@@ -56,4 +56,4 @@ jobs:
         run: node scripts/feed-health.mjs data/feed.json
       - name: Check published feeds and public pages
         if: always()
-        run: node scripts/feed-health.mjs --remote
+        run: node scripts/feed-health.mjs --remote --settle

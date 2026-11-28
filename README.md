@@ -18,7 +18,9 @@ After a validated bundle is published, the refresh job checks each source outcom
 
 Workflow failures use GitHub’s normal notification system. The operator must enable Actions notifications and choose email/web delivery in their GitHub notification settings; no email address or external messaging service is configured here. The watchdog also relies on GitHub scheduling and cannot detect a complete GitHub outage while that service is unavailable.
 
-Readiness (pure gating decision, no collection): `node scripts/feed-operations.mjs`. Local check: `node scripts/feed-health.mjs data/feed.json`. Public check: `node scripts/feed-health.mjs --remote`.
+The watchdog gives Cloudflare Pages time to serve a new deployment when the static replica is the only failing check. It checks all endpoints up to six times with 20 seconds between checks and reports the final result and the number of checks. A failure in a primary feed or page ends the wait on that check. Persistent replica failures still fail the job.
+
+Use `node scripts/feed-operations.mjs` to check readiness without collecting data and `node scripts/feed-health.mjs data/feed.json` to validate a local bundle. Run `node scripts/feed-health.mjs --remote` for a single public check or add `--settle` for the watchdog’s replica wait.
 
 ## EIA oil data
 
